@@ -9,8 +9,6 @@
 
 #include "SoftI2cBmp180.h"
 
-#define SAMPLE_WINDOW_SIZE	4
-
 
 class Bmp180Pressure : public IPressure {
 public:
@@ -19,57 +17,67 @@ public:
 
 	virtual void clear();
 	virtual bool setup();
-	virtual bool sampleTemperature();
-	virtual bool samplePressure();
 	virtual bool sample();
 
 	virtual bool wasPressed() {
 		return true;
 	}
 
-	int getSampleIndex() {
-		return mSampleIndex;
-	}
-
-	long getSampleTimeMillis() {
-		return mSampleTimeMillis;
-	}
-
-	bool isSampleValid() {
-		return mSampleIsValid;
-	}
-
 	bool isCalibrated() {
-		return mReferenceIsSet;
+		return mReference.isValid();
 	}
 
 private:
-	void detectReference();
+	void performCalibration();
 
 	struct Sample {
-		double pressure;
-		double temp;
+		long index;
 		long millis;
+		float pressure;
+		float temp;
+		float sum;
+
+		inline void clear() {
+			index = 0;
+			millis = 0;
+			pressure = 0.0;
+			temp = 0.0;
+			sum = 0.0;
+		}
+
+		inline bool isValid() {
+			return millis > 0;
+		}
 	};
 
+	inline Sample& getSample() {
+		return getSample(0);
+	}
+
+	inline Sample& getSample(int8_t offset) {
+		return mSample;
+	}
+
+	inline int getSampleCount() {
+		return mSampleIndex + 1;
+	}
+
+	bool sampleTemperature(Sample& o);
+	bool samplePressure(Sample& o);
+	void printSample(const Sample& s);
+
 private:
-	SFE_BMP180 mHardPressure;
+	static SFE_BMP180 sHardPressure;
 	SoftI2cBmp180 mSoftPressure;
 
-	int mSampleIndex;
-	double mSamplePressureValue;
-	double mSampleTemperatureValue;
-	long mSampleTimeMillis;
+	Sample mSample;
+	Sample mReference;
+
 	char mOverSample;
 	bool mUseHardwareI2C;
-	bool mSampleIsValid;
+	long mSampleIndex;
 
 	const char* mName;
-
-	double mReferenceSum;
-	double mReferencePressure;
-	int mReferenceCount;
-	bool mReferenceIsSet;
 };
 
 #endif // #ifndef _BMP180PRESSURE_H_
