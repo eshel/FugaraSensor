@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#include "Definitions.h"
+
 #include "IPressure.h"
 #include <SFE_BMP180.h>
 
@@ -19,20 +21,26 @@ public:
 	virtual bool setup();
 	virtual bool sample();
 
-	virtual bool wasPressed() {
-		return true;
+	virtual long lastPressMillis() {
+		return 0;
 	}
 
-	bool isCalibrated() {
-		return mReference.isValid();
+	virtual bool isValid() {
+		return mIsValid;
+	}
+
+	virtual const char* getName() {
+		return mName;
 	}
 
 private:
 	void performCalibration();
+	void resetCalibration();
+	bool isNoisyEnough();
 
 	struct Sample {
-		long index;
-		long millis;
+		int32_t index;
+		uint32_t millis;
 		float pressure;
 		float temp;
 		float sum;
@@ -54,8 +62,9 @@ private:
 		return getSample(0);
 	}
 
-	inline Sample& getSample(int8_t offset) {
-		return mSample;
+	inline Sample& getSample(int offset) {
+		int index = (mSampleIndex + offset) % BAROMETER_WINDOW_SIZE;
+		return mSample[index];
 	}
 
 	inline int getSampleCount() {
@@ -70,12 +79,14 @@ private:
 	static SFE_BMP180 sHardPressure;
 	SoftI2cBmp180 mSoftPressure;
 
-	Sample mSample;
+	Sample mSample[BAROMETER_WINDOW_SIZE];
 	Sample mReference;
 
 	char mOverSample;
 	bool mUseHardwareI2C;
-	long mSampleIndex;
+	int32_t mSampleIndex;
+
+	bool mIsValid;
 
 	const char* mName;
 };

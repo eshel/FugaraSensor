@@ -25,9 +25,17 @@ Bmp180Pressure::Bmp180Pressure(const char* strName, byte sdaPin, byte sclPin, ch
 
 
 void Bmp180Pressure::clear() {
-	mSample.clear();
-	mReference.clear();
+	mIsValid = false;
+	for (unsigned int i=0; i<BAROMETER_WINDOW_SIZE; i++) {
+		mSample[i].clear();
+	}
+	resetCalibration();
 	mSampleIndex = -1;
+}
+
+void Bmp180Pressure::resetCalibration() {
+	mReference.clear();
+	mIsValid = false;
 }
 
 bool Bmp180Pressure::setup() {
@@ -41,7 +49,7 @@ bool Bmp180Pressure::setup() {
 	}
 
 	if (!ret) {
-		if (SERIAL_IS_ENABLED) {
+		if (SERIAL_IS_ENABLED && BAROMETER_DEBUG_PRINTS) {
 			Serial.println("Bmp180Pressure init ERROR!");
 		}
 		return false;
@@ -51,13 +59,13 @@ bool Bmp180Pressure::setup() {
 
 void Bmp180Pressure::performCalibration() {
 	Sample& latest = getSample();
-	int sampleCount = getSampleCount();
 
 	if (!mReference.isValid() && latest.isValid()) {
 		mReference.sum += latest.pressure;
+		mReference.index++;
 
-		if (sampleCount >= BAROMETER_CALIBRATION_COUNT) {
-			mReference.pressure = mReference.sum / (float)sampleCount;
+		if (mReference.index >= BAROMETER_CALIBRATION_COUNT) {
+			mReference.pressure = mReference.sum / (float)mReference.index;
 			mReference.index = mSampleIndex;
 			mReference.millis = millis();
 		}
@@ -123,14 +131,16 @@ bool Bmp180Pressure::sample() {
 	Sample& target = getSample(0);
 	target.clear();
 
-	long sampleTime = millis();
+	// Using 32 bits will be okay as long as we're not up for more than 46 days straight
+	uint32_t sampleTime = (uint32_t)millis();
 
 	success = sampleTemperature(target) && samplePressure(target);
 	if (!success) {
-		clear();
-		if (SERIAL_IS_ENABLED) {
+		resetCalibration();
+		if (SERIAL_IS_ENABLED && BAROMETER_DEBUG_PRINTS) {
 			Serial.print("invalid! ");		
 		}
+		mIsValid = false;
 		return false;
 	} else {
 		target.index = mSampleIndex;
@@ -139,13 +149,41 @@ bool Bmp180Pressure::sample() {
 
 	performCalibration();
 
-	if (SERIAL_IS_ENABLED) {
+	bool noisy = isNoisyEnough();
+	bool enoughSamples = (getSampleCount() >= BAROMETER_MIN_NOISE_COUNT);
+	if (enoughSamples && !noisy) {
+		resetCalibration();
+	}
+
+	if (enoughSamples && noisy && mReference.isValid()) {
+		mIsValid = true;
+	}
+
+	if (SERIAL_IS_ENABLED && BAROMETER_DEBUG_PRINTS) {
 		printSample(target);
 	}
 
 	return true;
 }
 
+
+bool Bmp180Pressure::isNoisyEnough() {
+	int count = getSampleCount();
+	int aboveEpsilonCount = 0;
+	float latest, p, diff;
+	if (count > 2) {
+		latest = getSample(0).pressure;
+		for (int i=1; i<count; i++) {
+			p = getSample(i).pressure;
+			diff = abs(p - latest);
+			if (diff >= EPSILON) {
+				aboveEpsilonCount++;
+			}
+		}
+	}
+
+	return (aboveEpsilonCount >= BAROMETER_MIN_NOISE_COUNT);
+}
 
 void Bmp180Pressure::printSample(const Bmp180Pressure::Sample& s) {
 	float val = s.pressure - mReference.pressure;
@@ -162,5 +200,11 @@ void Bmp180Pressure::printSample(const Bmp180Pressure::Sample& s) {
 	if (!mReference.isValid()) {
 		Serial.print('*');
 	}
+	if (!isNoisyEnough()) {
+		Serial.print('~');
+	}
+	if (!mIsValid) {
+		Serial.print('!');
+	}	
 	Serial.print(". ");
 }

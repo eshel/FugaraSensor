@@ -111,9 +111,31 @@ void loop() {
 
 
 void pressureSampleLoop() {
+	IPressure* sensor;
+	bool isValid;
+	long lastPressMillis;
+
 	for (int i=0; i<SENSORS_NUM; i++) {
 		pressureSensors[i]->sample();
 	}
-	Serial.println("");
+
+	for (int i=0; i<SENSORS_NUM; i++) {
+		isValid = pressureSensors[i]->isValid();
+		lastPressMillis = pressureSensors[i]->lastPressMillis();
+
+		if (SERIAL_IS_ENABLED) {
+			Serial.print(pressureSensors[i]->getName());
+			Serial.print("=");
+			if (isValid) {
+				Serial.print(lastPressMillis);
+			} else {
+				Serial.print("x");
+			}
+			if (i < SENSORS_NUM-1) {
+				Serial.print(", ");
+			}
+		}
+	}
+	Serial.println(".");
 	delay(SAMPLE_DELAY_MS);
 }
