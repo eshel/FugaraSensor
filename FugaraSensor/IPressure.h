@@ -7,7 +7,6 @@ class IPressure {
 public:
 	virtual bool setup() = 0;
 	virtual bool sample() = 0;
-	virtual double getPressure() = 0;
 	virtual bool wasPressed() = 0;
 };
 
