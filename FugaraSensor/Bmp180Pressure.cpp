@@ -41,6 +41,7 @@ void Bmp180Pressure::resetCalibration() {
 bool Bmp180Pressure::setup() {
 	clear();
 	char ret = false;
+	mLastPressMillis = 0;
 
 	if (mUseHardwareI2C) {
 		ret = sHardPressure.begin(); 
@@ -116,7 +117,7 @@ bool Bmp180Pressure::samplePressure(Bmp180Pressure::Sample& o) {
 		return false;
 	}
 
-	if (o.pressure < MIN_VALID_PRESSURE_VALUE) {
+	if ((getSampleCount() > 1) && (abs(pressure - getSample(1).pressure) >= BAROMETER_MAX_DIFF_ALLOWED)) {
 		return false;
 	}
 
@@ -138,7 +139,8 @@ bool Bmp180Pressure::sample() {
 	if (!success) {
 		resetCalibration();
 		if (SERIAL_IS_ENABLED && BAROMETER_DEBUG_PRINTS) {
-			Serial.print("invalid! ");		
+			Serial.print(mName);
+			Serial.print(": invalid! ");		
 		}
 		mIsValid = false;
 		return false;
@@ -163,6 +165,13 @@ bool Bmp180Pressure::sample() {
 		printSample(target);
 	}
 
+	if (mIsValid) {
+		bool touched = detectTouch();
+		if (touched) {
+			mLastPressMillis = millis();
+		}
+	}
+
 	return true;
 }
 
@@ -183,6 +192,13 @@ bool Bmp180Pressure::isNoisyEnough() {
 	}
 
 	return (aboveEpsilonCount >= BAROMETER_MIN_NOISE_COUNT);
+}
+
+bool Bmp180Pressure::detectTouch() {
+	if (millis() - mLastPressMillis < BAROMETER_MIN_TOUCH_INTERVAL_MS) {
+		return false;
+	}
+	return false;
 }
 
 void Bmp180Pressure::printSample(const Bmp180Pressure::Sample& s) {

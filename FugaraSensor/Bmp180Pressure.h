@@ -22,7 +22,7 @@ public:
 	virtual bool sample();
 
 	virtual long lastPressMillis() {
-		return 0;
+		return mLastPressMillis;
 	}
 
 	virtual bool isValid() {
@@ -37,6 +37,7 @@ private:
 	void performCalibration();
 	void resetCalibration();
 	bool isNoisyEnough();
+	bool detectTouch();
 
 	struct Sample {
 		int32_t index;
@@ -85,6 +86,7 @@ private:
 	char mOverSample;
 	bool mUseHardwareI2C;
 	int32_t mSampleIndex;
+	long mLastPressMillis;
 
 	bool mIsValid;
 
