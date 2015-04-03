@@ -2,7 +2,7 @@
 #define _DEFINITIONS_H_
 
 #define SERIAL_IS_ENABLED				true
-#define SERIAL_BAUD						115200
+#define SERIAL_BAUD						38400
 
 #define SAMPLE_DELAY_MS					50
 

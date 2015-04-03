@@ -34,11 +34,11 @@ IPressure* pressureSensors[SENSORS_NUM] = {
 // State
 bool initialized = false;
 
-#define SLAVE_ADDR_BAD	255
+#define SLAVE_ADDR_BAD	0xFF
 
-uint8_t readSlaveAddr() {
-	uint8_t r0 = EEPROM.read(0);
-	uint8_t r1 = EEPROM.read(1);
+unsigned char readSlaveAddr() {
+	unsigned char r0 = EEPROM.read(0);
+	unsigned char r1 = EEPROM.read(1);
 	if (r0 == SLAVE_ADDR_BAD) {
 		return SLAVE_ADDR_BAD;
 	} else if (r0 != ~r1) {
@@ -48,12 +48,12 @@ uint8_t readSlaveAddr() {
 	}
 }
 
-void writeSlaveAddr(uint8_t addr) {
+void writeSlaveAddr(unsigned char addr) {
 	EEPROM.write(0, addr);
 	EEPROM.write(1, ~addr);
 }
 
-uint8_t slaveAddr = SLAVE_ADDR_BAD;
+unsigned char slaveAddr = SLAVE_ADDR_BAD;
 
 void setup() {
 	if (SERIAL_IS_ENABLED) {
