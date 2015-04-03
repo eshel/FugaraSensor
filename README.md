@@ -12,25 +12,26 @@ This project contains the code for the touch sensing. It has a few responsibilit
 * Periodic sampling of up to 4 barometers for air pressure reading, including calibration, stabilization disconnects, etc.
 * Recognition of touch event according to last N barometer samples.
 * Answer modbus RTU "read register" requests from host PC (modbus master), with the timestamp of the latest "touch" event. Each barometer corresponds to one register. Timestamps are in milliseconds since arduino's boot (enough for 46 days of consecutive operation).
-* Modbus RTU slave address is stored in the lower two bytes of the EEPROM (offset 0 - address, offset 1 - bitwise NOT of the address). This may be modified using the SlaveAddress program (included).
+* Modbus RTU slave address is stored in the lower two bytes of the EEPROM (offset 0 - address, offset 1 - bitwise NOT of the address). This may be modified using the SlaveAddress utility (included).
 
 ## FugaraSensor tweaking & customization
 
 These files should be modified when getting ready for bringing up the project:
 
-* Definitions.h - pin definitions, timeouts, delays, thresholds, serial config, debug prints etc. See documentation inside that file.
-* Bmp180Pressure.cpp (`bool detectTouch()`) - modify the implementation of `detectTouch()` to handle real-world barometer pressure data. `true` should be returned exactly once for each touch event. If no new touch event has been recognized, should return false.
+* `Definitions.h` - pin definitions, timeouts, delays, thresholds, serial config, debug prints etc. See documentation inside that file.
+* `Bmp180Pressure.cpp` (`bool detectTouch()`) - modify the implementation of `detectTouch()` to handle real-world barometer pressure data. `true` should be returned exactly once for each touch event. If no new touch event has been recognized, should return `false`.
+
+Just incase we need to switch out the barometer for a different type of sensor, the same program layout can be used. Implement a new `IPressure` class, and in `FugaraSensor.ino` create instances of these and set pointers to them inside `IPressure* pressureSensors[SENSORS_NUM]`.
 
 ## SlaveAddress project
 
 A small utility program to write the slave address into the device's EEPROM memory.
 
-Instructions:
-
-1. Open the SlaveAddress sketch
-2. Modify the SLAVE_ADDR constant to the desired address (between 1-31).
+1. Open the `SlaveAddress` sketch
+2. Modify the `SLAVE_ADDR` constant to the desired address (between `1`-`31`).
 3. Compile & Upload
 4. Open Serial Monitor (baud 38400 by default)
 5. Verify the address has been written correctly (serial monitor prints).
 6. Profit.
+
 
